@@ -102,6 +102,40 @@ class PhashRequest : public Nan::AsyncWorker {
     string hash;
 };
 
+void CompareImage(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    Nan::HandleScope scope;
+    String::Utf8Value fileA(args[0]);
+    String::Utf8Value fileB(args[1]);
+
+    double pcc;
+
+    string ret;
+    
+    // prevent segfault on an empty file, see https://github.com/aaronm67/node-phash/issues/8
+    if (!fileExists(*fileA)) {
+        ret = "-2";
+    }
+
+    // prevent segfault on an empty file, see https://github.com/aaronm67/node-phash/issues/8
+    if (!fileExists(*fileB)) {
+        ret = "-2";
+    }
+
+    
+    try {
+        int val = ph_compare_images(*fileA, *fileB, pcc);
+
+        ///return int 0 (false) for different image, 1 (true) for same images, less than 0 for error
+        ret = NumberToString(val);
+    }
+    catch (...) {
+        // something went wrong; probably a problem with CImg.
+        ret = "-1";
+    }
+
+    args.GetReturnValue().Set(Nan::New(ret.c_str()).ToLocalChecked());
+}
+
 
 NAN_METHOD(ImageHashAsync) {
   if (info.Length() < 2 || !info[1]->IsFunction()) {
@@ -158,6 +192,7 @@ void RegisterModule(Handle<Object> target) {
     Nan::SetMethod(target, "imageHashSync", ImageHashSync);
     Nan::SetMethod(target, "imageHash", ImageHashAsync);
     Nan::SetMethod(target, "hammingDistance", HammingDistance);
+    Nan::SetMethod(target, "compareImage", CompareImage);
 
     // methods below are deprecated
     Nan::SetMethod(target, "imagehash", ImageHashAsync);
